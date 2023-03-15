@@ -1,8 +1,9 @@
-from aiogram import Bot, Dispatcher, executor
+from aiogram import Bot, Dispatcher, executor, filters, types
 from dotenv import load_dotenv
 
 import os
 from database import DataBasePostgres
+import buttons as btn
 
 
 load_dotenv()
@@ -52,7 +53,7 @@ quiz_answers = (None, 1, 0, 0, 1, 2, 1, 0, 1, 2, 0, 2)
 
 
 @dp.message_handler(commands="start")
-async def start(message):
+async def start(message: types.Message):
     id = message.from_id
     answer = (
         f"*Приветствую!* 🌸\n\n"
@@ -78,13 +79,75 @@ async def start(message):
         f"[Telegram](https://t.me/test_borcheg_bot)\n\n"
     )
 
-    if not(bd.check_user_exist(id)):
+    if not bd.check_user_exist(id):
         bd.add_user(id)
 
-    await bot.send_message(id, answer, parse_mode="Markdown")
+    await bot.send_message(id, answer, parse_mode="Markdown", reply_markup=btn.menu_keyboard)
 
 
+@dp.message_handler(filters.Regexp(regexp=r'(Р|р)егистрация'))
+async def registration(message: types.Message):
+    id = message.from_id
+    if bd.check_reg_status(id) == "Not registered":
+        bd.set_reg_status(id, "Set name")
+        await bot.send_message(id, "Введите свое имя или никнейм")
+    elif bd.check_reg_status(id) == "Registered":
+        await bot.send_message(
+            id,
+            f"Вы уже зарегистрированы под именем {bd.get_name(id)}\nХотите изменить свои данные?",
+            reply_markup=btn.change_reg_keyboard
+        )
 
+
+@dp.message_handler()
+async def bot_message(message: types.Message):
+    id = message.from_id
+    answer = (
+        f"Спасибо за регистрацию на вебинар! 👍\n"
+        f"Жду тебя 23 марта в 20:00!\n"
+        f"_Ссылка на вебинар будет отправлена в этот чат и на почту за 10 минут до его начала, не пропусти!_"
+    )
+    if bd.check_reg_status(id) == "Set name":
+        if len(message.text) > 50:
+            await message.reply("Имя не должно превышать 50 символов!")
+        else:
+            bd.set_name(id, message.text)
+            bd.set_reg_status(id, "Set email")
+            await bot.send_message(id, "Введите свою почту")
+
+    elif bd.check_reg_status(id) == "Set email":
+        if len(message.text) > 50 or "@" not in message.text:
+            await message.reply("Почта должна содержать символ '@' и не превышать 50 символов!")
+        else:
+            bd.set_email(id, message.text)
+            bd.set_reg_status(id, "Verification")
+            await bot.send_message(
+                id,
+                f"Ваше имя: {bd.get_name(id)}\nВаша почта: {bd.get_email(id)}",
+                reply_markup=btn.verification_keyboard
+            )
+
+    elif bd.check_reg_status(id) == "Verification" and message.text == 'Да ✅':
+        bd.set_reg_status(id, "Registered")
+        await bot.send_message(id, answer, parse_mode="Markdown")
+
+    elif bd.check_reg_status(id) == "Verification" and message.text == 'Нет ❌':
+        bd.set_reg_status(id, "Not registered")
+        await bot.send_message(
+            id,
+            f"Чтобы пройти регистрацию заново нажми кнопку 'Регистрация'",
+            reply_markup=btn.menu_keyboard
+        )
+
+    elif bd.check_reg_status(id) == "Registered" and message.text == 'Изменить данные ✍':
+        bd.set_reg_status(id, "Set name")
+        await bot.send_message(id, f"Введите свое имя или никнейм")
+
+    elif bd.check_reg_status(id) == "Registered" and message.text == 'Оставить без изменений ✋':
+        await bot.send_message(id, f"Ваши данные остались без изменений")
+
+    else:
+        await bot.send_message(id, f"Не понимаю")
 
 
 if __name__ == '__main__':
