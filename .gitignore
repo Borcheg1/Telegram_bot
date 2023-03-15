@@ -1,5 +1,9 @@
 # virtual environment
 /env
+.env
 
 #Python files
 .idea
+
+#Test files
+test.py
