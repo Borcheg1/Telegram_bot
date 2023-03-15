@@ -129,7 +129,7 @@ async def bot_message(message: types.Message):
 
     elif bd.check_reg_status(id) == "Verification" and message.text == 'Да ✅':
         bd.set_reg_status(id, "Registered")
-        await bot.send_message(id, answer, parse_mode="Markdown")
+        await bot.send_message(id, answer, parse_mode="Markdown", reply_markup=btn.menu_keyboard)
 
     elif bd.check_reg_status(id) == "Verification" and message.text == 'Нет ❌':
         bd.set_reg_status(id, "Not registered")
