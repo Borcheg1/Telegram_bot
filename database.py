@@ -33,13 +33,20 @@ class DataBasePostgres:
 
     def check_reg_status(self, user_id):
         with self.connection:
-            result = self.cursor.execute("SELECT reg_status FROM users WHERE user_id = (%s)", (user_id,))
-            return bool(result)
+            return self.cursor.execute("SELECT reg_status FROM users WHERE user_id = (%s)", (user_id,))
 
     def set_name(self, user_id, name):
         with self.connection:
             return self.cursor.execute("UPDATE users SET name = (%s) WHERE user_id = (%s)", (name, user_id,))
 
+    def get_name(self, user_id):
+        with self.connection:
+            return self.cursor.execute("SELECT name FROM users WHERE user_id = (%s)", (user_id,))
+
     def set_email(self, user_id, email):
         with self.connection:
             return self.cursor.execute("UPDATE users SET email = (%s) WHERE user_id = (%s)", (email, user_id,))
+
+    def get_email(self, user_id):
+        with self.connection:
+            return self.cursor.execute("SELECT email FROM users WHERE user_id = (%s)", (user_id,))
