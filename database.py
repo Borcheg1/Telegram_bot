@@ -5,7 +5,8 @@ import os
 
 class DataBasePostgres:
     """
-    Переменные окружения в конструкторе берутся с сервиса RailWay при деплое приложения
+    Переменные окружения в конструкторе берутся с сервиса RailWay при деплое приложения.
+    При использовании локальной БД или другого сервиса, задайте эти переменные окружения.
     """
     def __init__(self):
         self.connection = psycopg2.connect(
@@ -19,12 +20,12 @@ class DataBasePostgres:
 
     def add_user(self, user_id):
         with self.connection:
-            return self.cursor.execute("INSERT INTO users (user_id) VALUE (%s)", (user_id,))
+            return self.cursor.execute("INSERT INTO users (user_id) VALUES (%s)", (user_id,))
 
-    # def check_user_exist(self, user_id):
-    #     with self.connection:
-    #         result = self.cursor.execute("SELECT * FROM users WHERE user_id = (%s)", (user_id,)).fetchall()
-    #         return bool(len(result))
+    def check_user_exist(self, user_id):
+        with self.connection:
+            result = self.cursor.execute("SELECT user_id FROM users WHERE user_id = (%s)", (user_id,))
+            return bool(result)
 
     def set_reg_status(self, user_id, reg_status):
         with self.connection:
