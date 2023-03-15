@@ -1,4 +1,3 @@
-from dotenv import load_dotenv
 import psycopg2
 
 import os
@@ -43,5 +42,3 @@ class DataBasePostgres:
     def set_email(self, user_id, email):
         with self.connection:
             return self.cursor.execute("UPDATE users SET email = (%s) WHERE user_id = (%s)", (email, user_id,))
-
-
