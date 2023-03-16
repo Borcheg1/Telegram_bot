@@ -100,7 +100,7 @@ async def registration(message: types.Message):
 
 
 @dp.message_handler()
-async def bot_message(message: types.Message):
+async def reg_message_handler(message: types.Message):
     id = message.from_id
     answer = (
         f"Спасибо за регистрацию на вебинар! 👍\n"
