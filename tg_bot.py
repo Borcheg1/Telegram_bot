@@ -4,52 +4,15 @@ from dotenv import load_dotenv
 import os
 from database import DataBasePostgres
 import buttons as btn
+from quizdata import Quiz
 
 
 load_dotenv()
 
-bot = Bot(os.getenv("TOKEN"))
+bot = Bot(os.environ["TOKEN"])
 dp = Dispatcher(bot)
 
 bd = DataBasePostgres()
-
-quiz_data = {
-    "Марсельское таро и таро Райдера Уэйта - это одна и та же система?": [
-        "Верно", "Не верно"
-    ],
-    "Какой из Арканов предвещает скорое замужество?": [
-        "Прямая императрица", "Перевёрнутая императрица", "Четверка кубков"
-    ],
-    "Состоится ли свадьба по четвёрке жезлов?": [
-        "Да", "Нет", "Состоится, но не скоро"
-    ],
-    "Какой из перечисленных Арканов говорит о мудрости?": [
-        "Десятка кубков", "Отшельник", "Колесо фортуны"
-    ],
-    "На опасность на дороге укажет связка Арканов:": [
-        "Император + туз жезлов", "Восемь кубков + туз кубков", "Колесница + 10 мечей"
-    ],
-    "Будет ли беременность в загаданный срок по перевёрнутой императрице?": [
-        "Да", "Нет"
-    ],
-    "Кто из рыцарей самый романтичный?": [
-        "Рыцарь кубков", "Рыцарь жезлов", "Рыцарь мечей", "Рыцарь пентаклей"
-    ],
-    "Какая из королев наиболее харизматичная?": [
-        "Королева пентаклей", "Королева жезлов", "Королева кубков", "Королева мечей"
-    ],
-    "Какая из перечисленных связок укажет на измену?": [
-        "Влюблённые + двойка кубков", "Туз кубков + туз жезлов", "Дьявол + пятерка мечей"
-    ],
-    "На переезд укажет": [
-        "Колесница", "Туз пентаклей", "Тройка пентаклей"
-    ],
-    "На девичник укажет": [
-        "Туз мечей", "Тройка пентаклей", "Тройка кубков"
-    ]
-}
-
-quiz_answers = (None, 1, 0, 0, 1, 2, 1, 0, 1, 2, 0, 2)
 
 
 @dp.message_handler(commands="start")
@@ -91,6 +54,7 @@ async def registration(message: types.Message):
     if bd.check_reg_status(id) == "Not registered":
         bd.set_reg_status(id, "Set name")
         await bot.send_message(id, "Введите свое имя или никнейм")
+
     elif bd.check_reg_status(id) == "Registered":
         await bot.send_message(
             id,
@@ -100,9 +64,15 @@ async def registration(message: types.Message):
 
 
 @dp.message_handler()
-async def reg_message_handler(message: types.Message):
+async def message_handler(message: types.Message):
+    """
+    ================================
+    ==    REGISTRATION HANDLER    ==
+    ================================
+    """
+
     id = message.from_id
-    answer = (
+    reg_answer = (
         f"Спасибо за регистрацию на вебинар! 👍\n"
         f"Жду тебя 23 марта в 20:00!\n"
         f"_Ссылка на вебинар будет отправлена в этот чат и на почту за 10 минут до его начала, не пропусти!_"
@@ -129,7 +99,7 @@ async def reg_message_handler(message: types.Message):
 
     elif bd.check_reg_status(id) == "Verification" and message.text == 'Да ✅':
         bd.set_reg_status(id, "Registered")
-        await bot.send_message(id, answer, parse_mode="Markdown", reply_markup=btn.menu_keyboard)
+        await bot.send_message(id, reg_answer, parse_mode="Markdown", reply_markup=btn.menu_keyboard)
 
     elif bd.check_reg_status(id) == "Verification" and message.text == 'Нет ❌':
         bd.set_reg_status(id, "Not registered")
@@ -144,11 +114,129 @@ async def reg_message_handler(message: types.Message):
         await bot.send_message(id, f"Введите свое имя или никнейм")
 
     elif bd.check_reg_status(id) == "Registered" and message.text == 'Оставить без изменений ✋':
-        await bot.send_message(id, f"Ваши данные остались без изменений")
+        await bot.send_message(id, f"Ваши данные остались без изменений", reply_markup=btn.menu_keyboard)
+
+    """
+    ================================
+    ==        QUIZ HANDLER        ==
+    ================================
+    """
+
+    if message.text == "Викторина 🎮" and bd.check_reg_status(id) != "Registered":
+        await bot.send_message(id, "Пожалуйста, зарегистрируйтесь!", reply_markup=btn.menu_keyboard)
+
+    elif message.text == "Викторина 🎮" and bd.check_reg_status(id) == "Registered":
+        bd.set_quiz_score(id, "0, 0, 0")
+        await quiz(id)
+
+
+async def quiz(id, answer=None):
+    start_answer = (
+        f"❓ Викторина состоит из 11 вопросов ❓\n"
+        f"Проверим, как хорошо вы знакомы с таро?"
+    )
+
+    if answer is None:
+        msg = await bot.send_poll(
+                    id,
+                    start_answer,
+                    ['Начать ✅', 'Отменить ❌'],
+                    type='quiz',
+                    correct_option_id=0,
+                    is_anonymous=False
+                )
+
+        bd.set_quiz_status(id, msg.poll.id)
 
     else:
-        await bot.send_message(id, f"Не понимаю")
+        msg = await bot.send_poll(
+            id,
+            answer[0],
+            answer[1][0],
+            type='quiz',
+            correct_option_id=answer[1][1],
+            is_anonymous=False
+        )
+
+        bd.set_quiz_status(id, msg.poll.id)
+
+
+@dp.poll_answer_handler()
+async def poll_answer_handler(quiz_answer: types.PollAnswer):
+    id = quiz_answer.user.id
+    q = Quiz()
+    poll_id = quiz_answer.poll_id
+
+    if poll_id == bd.get_quiz_status(id):
+        quiz_stage, quiz_score, correct_answer = bd.get_quiz_score(id).split(', ')
+        quiz_stage, quiz_score, correct_answer = int(quiz_stage), int(quiz_score), int(correct_answer)
+
+        if quiz_stage != 12:
+
+            if quiz_stage == 0 and quiz_answer.option_ids[0] == correct_answer:
+                answer = q.random_answer()
+                quiz_stage += 1
+                bd.set_quiz_score(id, f"{quiz_stage}, {quiz_score}, {answer[1][1]}")
+                await quiz(id, answer)
+
+            elif quiz_stage == 0 and quiz_answer.option_ids[0] != correct_answer:
+                bd.set_quiz_status(id, "Cancelled")
+                await bot.send_message(id, "Проверьте свои знания в следующий раз!", reply_markup=btn.menu_keyboard)
+
+            elif quiz_answer.option_ids[0] == correct_answer:
+                quiz_stage += 1
+                quiz_score += 1
+                answer = q.random_answer()
+                bd.set_quiz_score(id, f"{quiz_stage}, {quiz_score}, {answer[1][1]}")
+                await quiz(id, answer)
+
+            elif quiz_answer.option_ids[0] != correct_answer:
+                quiz_stage += 1
+                answer = q.random_answer()
+                bd.set_quiz_score(id, f"{quiz_stage}, {quiz_score}, {answer[1][1]}")
+                await quiz(id, answer)
+
+        else:
+            await bot.send_message(
+                id,
+                f"Поздравляю! 👏\n"
+                f"Верных ответов {quiz_score} из 11"
+            )
+
+            bd.set_quiz_status(id, "Cancelled")
 
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
+
+
+
+# {"message_id": 370,
+#  "from": {
+#     "id": 6273275670,
+#     "is_bot": true,
+#     "first_name": "test_bot",
+#     "username": "test_borcheg_bot"
+# },
+#  "chat":{
+#      "id": 1389025459,
+#      "first_name": "Borcheg",
+#      "type": "private"
+#  },
+#  "date": 1678993918,
+#  "poll": {
+#      "id": "5231373937232839491",
+#      "question": "Какой из Арканов предвещает скорое замужество?",
+#      "options": [
+#          {"text": "Прямая императрица", "voter_count": 0},
+#          {"text": "Перевёрнутая императрица", "voter_count": 0},
+#          {"text": "Четверка кубков", "voter_count": 0}
+#      ],
+#      "total_voter_count": 0,
+#      "is_closed": false,
+#      "is_anonymous": false,
+#      "type": "quiz",
+#      "allows_multiple_answers": false,
+#      "correct_option_id": 0}
+#  }
+
