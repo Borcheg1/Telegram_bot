@@ -62,3 +62,12 @@ class DataBasePostgres:
         with self.connection:
             self.cursor.execute("SELECT quiz_status FROM users WHERE user_id = (%s)", (user_id,))
             return self.cursor.fetchone()[0]
+
+    def set_quiz_score(self, user_id, quiz_score):
+        with self.connection:
+            self.cursor.execute("UPDATE users SET quiz_score = (%s) WHERE user_id = (%s)", (quiz_score, user_id,))
+
+    def get_quiz_score(self, user_id):
+        with self.connection:
+            self.cursor.execute("SELECT quiz_score FROM users WHERE user_id = (%s)", (user_id,))
+            return self.cursor.fetchone()[0]
