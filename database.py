@@ -73,8 +73,8 @@ class DataBasePostgres:
             return self.cursor.fetchone()[0]
 
     def set_quiz_answers(self, user_id, answers):
-        self.cursor.execute("UPDATE users SET quiz_answers WHERE user_id = (%s)", (answers, user_id,))
+        self.cursor.execute("UPDATE users SET quiz_answers = (%s) WHERE user_id = (%s)", (answers, user_id,))
 
     def get_quiz_answers(self, user_id):
-        self.cursor.execute("SELECT quiz_answers FROM user WHERE user_id = (%s)", (user_id,))
+        self.cursor.execute("SELECT quiz_answers FROM users WHERE user_id = (%s)", (user_id,))
         return self.cursor.fetchone()
