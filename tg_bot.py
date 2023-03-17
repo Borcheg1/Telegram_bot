@@ -14,6 +14,8 @@ dp = Dispatcher(bot)
 
 bd = DataBasePostgres()
 
+qz = Quiz()
+
 
 @dp.message_handler(commands="start")
 async def start(message: types.Message):
@@ -126,7 +128,7 @@ async def message_handler(message: types.Message):
         await bot.send_message(id, "Пожалуйста, зарегистрируйтесь!", reply_markup=btn.menu_keyboard)
 
     elif message.text == "Викторина 🎮" and bd.check_reg_status(id) == "Registered":
-        bd.set_quiz_score(id, "0, 0, 0")
+        bd.set_quiz_score(id, "-1, 0, 0")
         await quiz(id)
 
 
@@ -151,10 +153,10 @@ async def quiz(id, answer=None):
     else:
         msg = await bot.send_poll(
             id,
-            answer[0],
-            answer[1][0],
+            answer,
+            qz.get_questions(answer),
             type='quiz',
-            correct_option_id=answer[1][1],
+            correct_option_id=qz.get_correct_question(answer),
             is_anonymous=False
         )
 
@@ -164,43 +166,45 @@ async def quiz(id, answer=None):
 @dp.poll_answer_handler()
 async def poll_answer_handler(quiz_answer: types.PollAnswer):
     id = quiz_answer.user.id
-    q = Quiz()
     poll_id = quiz_answer.poll_id
 
     if poll_id == bd.get_quiz_status(id):
+
         quiz_stage, quiz_score, correct_answer = bd.get_quiz_score(id).split(', ')
         quiz_stage, quiz_score, correct_answer = int(quiz_stage), int(quiz_score), int(correct_answer)
 
-        if quiz_stage != 12:
+        if quiz_stage < 10:
 
-            if quiz_stage == 0 and quiz_answer.option_ids[0] == correct_answer:
-                answer = q.random_answer()
+            if quiz_stage == -1 and quiz_answer.option_ids[0] == correct_answer:
+                answers = qz.shuffle_answers()
+                bd.set_quiz_answers(id, '#'.join(answers))
                 quiz_stage += 1
-                bd.set_quiz_score(id, f"{quiz_stage}, {quiz_score}, {answer[1][1]}")
-                await quiz(id, answer)
+                correct_answer = qz.get_correct_question(answers[quiz_stage])
+                bd.set_quiz_score(id, f"{quiz_stage}, {quiz_score}, {correct_answer}")
+                await quiz(id, answers[quiz_stage])
 
-            elif quiz_stage == 0 and quiz_answer.option_ids[0] != correct_answer:
+            elif quiz_stage == -1 and quiz_answer.option_ids[0] != correct_answer:
                 bd.set_quiz_status(id, "Cancelled")
                 await bot.send_message(id, "Проверьте свои знания в следующий раз!", reply_markup=btn.menu_keyboard)
 
-            elif quiz_answer.option_ids[0] == correct_answer:
-                quiz_stage += 1
-                quiz_score += 1
-                answer = q.random_answer()
-                bd.set_quiz_score(id, f"{quiz_stage}, {quiz_score}, {answer[1][1]}")
-                await quiz(id, answer)
+            else:
 
-            elif quiz_answer.option_ids[0] != correct_answer:
+                if quiz_answer.option_ids[0] == correct_answer:
+                    quiz_score += 1
+
                 quiz_stage += 1
-                answer = q.random_answer()
-                bd.set_quiz_score(id, f"{quiz_stage}, {quiz_score}, {answer[1][1]}")
-                await quiz(id, answer)
+                answers = bd.get_quiz_answers(id).split('#')
+                next_answer = answers[quiz_stage]
+                correct_answer = qz.get_correct_question(next_answer)
+                bd.set_quiz_score(id, f"{quiz_stage}, {quiz_score}, {correct_answer}")
+                await quiz(id, next_answer)
 
         else:
             await bot.send_message(
                 id,
                 f"Поздравляю! 👏\n"
-                f"Верных ответов {quiz_score} из 11"
+                f"Верных ответов {quiz_score} из 11",
+                reply_markup=btn.menu_keyboard
             )
 
             bd.set_quiz_status(id, "Cancelled")
@@ -208,35 +212,3 @@ async def poll_answer_handler(quiz_answer: types.PollAnswer):
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
-
-
-
-# {"message_id": 370,
-#  "from": {
-#     "id": 6273275670,
-#     "is_bot": true,
-#     "first_name": "test_bot",
-#     "username": "test_borcheg_bot"
-# },
-#  "chat":{
-#      "id": 1389025459,
-#      "first_name": "Borcheg",
-#      "type": "private"
-#  },
-#  "date": 1678993918,
-#  "poll": {
-#      "id": "5231373937232839491",
-#      "question": "Какой из Арканов предвещает скорое замужество?",
-#      "options": [
-#          {"text": "Прямая императрица", "voter_count": 0},
-#          {"text": "Перевёрнутая императрица", "voter_count": 0},
-#          {"text": "Четверка кубков", "voter_count": 0}
-#      ],
-#      "total_voter_count": 0,
-#      "is_closed": false,
-#      "is_anonymous": false,
-#      "type": "quiz",
-#      "allows_multiple_answers": false,
-#      "correct_option_id": 0}
-#  }
-
