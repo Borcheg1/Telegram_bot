@@ -1,3 +1,5 @@
+import asyncio
+
 from aiogram import Bot, Dispatcher, executor, filters, types
 from dotenv import load_dotenv
 
@@ -130,6 +132,23 @@ async def message_handler(message: types.Message):
     elif message.text == "Викторина 🎮" and bd.check_reg_status(id) == "Registered":
         bd.set_quiz_score(id, "-1, 0, 0")
         await quiz(id)
+
+    """
+    ================================
+    ==       PRICE HANDLER        ==
+    ================================
+    """
+
+    if message.text == "Цены 💰":
+        pictures = os.listdir('price_pictures')
+        media = types.MediaGroup()
+        for picture in pictures:
+            media.attach_photo(types.InputFile(f"price_pictures/{picture}"), picture)
+
+
+        await bot.send_media_group(id, media=media)
+
+
 
 
 async def quiz(id, answer=None):
