@@ -1,5 +1,3 @@
-import asyncio
-
 from aiogram import Bot, Dispatcher, executor, filters, types
 from dotenv import load_dotenv
 
@@ -145,10 +143,8 @@ async def message_handler(message: types.Message):
         for picture in pictures:
             media.attach_photo(types.InputFile(f"price_pictures/{picture}"), picture)
 
-
+        await bot.send_message(id, f"Загружаю...")
         await bot.send_media_group(id, media=media)
-
-
 
 
 async def quiz(id, answer=None):
