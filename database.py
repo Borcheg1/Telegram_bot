@@ -21,6 +21,11 @@ class DataBasePostgres:
     def add_user(self, user_id):
         with self.connection:
             self.cursor.execute("INSERT INTO users (user_id) VALUES (%s)", (user_id,))
+    
+    def get_users_ids(self):
+        with self.connection:
+            self.cursor.execute("SELECT user_id FROM users")
+            return self.cursor.fetchall()
 
     def check_user_exist(self, user_id):
         with self.connection:
