@@ -1,16 +1,24 @@
 import asyncio
+from datetime import datetime
+import os
 
 from aiogram import Bot, Dispatcher, executor, filters, types
 from dotenv import load_dotenv
 from loguru import logger
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-import os
 from database import DataBasePostgres
 import buttons as btn
 from quizdata import Quiz
+from dates import Date
 
 
+WEBINAR_DATE = datetime.strptime("2023 3 20 16:15", "%Y %m %d %H %M")  # установите время в формате год, месяц, день, час, минута
+                                                                       # например WEBINAR_DATE = datetime.strptime("2023 3 20 16:15", "%Y %m %d %H %M")
 load_dotenv()
+os.environ['TZ'] = "Europe/Moscow"  #  Часовой пояс, в котором будет рассчитано время
+
+scheduler = AsyncIOScheduler()
 
 logger.add(
     "log",
@@ -26,6 +34,7 @@ dp = Dispatcher(bot)
 bd = DataBasePostgres()
 
 qz = Quiz()
+dt = Date(WEBINAR_DATE)
 
 
 @dp.message_handler(commands="start")
@@ -34,7 +43,7 @@ async def start(message: types.Message):
     answer = (
         f"*Приветствую!* 🌸\n\n"
         f"Рада вашему интересу к Таро! Приглашаю на бесплатный вебинар «Обучение Таро. Система Райдера Уэйта».\n\n"
-        f"*Вебинар состоится 23 марта в 20:00 по Московскому времени*\n"
+        f"*Вебинар состоится {dt.get_webinar_date()} по Московскому времени*\n"
         f"_Ссылка на вебинар будет отправлена в этот чат за 10 минут до его начала_\n\n"
         f"На вебинаре я расскажу:\n"
         f"• выбор колоды 🎴\n"
@@ -60,7 +69,7 @@ async def start(message: types.Message):
     try:
         await bot.send_message(id, answer, parse_mode="Markdown", reply_markup=btn.menu_keyboard)
     except Exception as error:
-        logger.debug(f"{error}: id {id} (send message)")
+        logger.debug(f"{error}: id {id} (user didn't get start message)")
 
 
 @dp.message_handler(filters.Regexp(regexp=r'(Р|р)егистрация'))
@@ -73,7 +82,7 @@ async def registration(message: types.Message):
             try:
                 await bot.send_message(id, "Введите свое имя или никнейм")
             except Exception as error:
-                logger.debug(f"{error}: id {id} (send message)")
+                logger.debug(f"{error}: id {id} (user couldn't set name)")
 
         elif bd.check_reg_status(id) == "Registered":
             try:
@@ -83,10 +92,10 @@ async def registration(message: types.Message):
                     reply_markup=btn.change_reg_keyboard
                 )
             except Exception as error:
-                logger.debug(f"{error}: id {id} (send message)")
+                logger.debug(f"{error}: id {id} (user couldn't change his reg data)")
 
     except Exception as error:
-        logger.debug(f"{error}: id {id} (bd query)")
+        logger.debug(f"{error}: id {id} (check_reg_status query didn't work)")
 
 
 @dp.message_handler()
@@ -100,7 +109,7 @@ async def message_handler(message: types.Message):
     id = message.from_id
     reg_answer = (
         f"Спасибо за регистрацию на вебинар! 👍\n"
-        f"Жду тебя 23 марта в 20:00!\n"
+        f"Жду тебя {dt.get_webinar_date()}!\n"
         f"_Ссылка на вебинар будет отправлена в этот чат и на почту за 10 минут до его начала, не пропусти!_"
     )
 
@@ -110,26 +119,41 @@ async def message_handler(message: types.Message):
                 try:
                     await message.reply("Имя не должно превышать 50 символов!")
                 except Exception as error:
-                    logger.debug(f"{error}: id {id} (send message)")
+                    logger.debug(f"{error}: id {id} (user didn't get valid set name message)")
 
             else:
-                bd.set_name(id, message.text)
-                bd.set_reg_status(id, "Set email")
+                try:
+                    bd.set_name(id, message.text)
+                except Exception as error:
+                    logger.debug(f"{error}: id {id} (query set_name didn't work)")
+
+                try:
+                    bd.set_reg_status(id, "Set email")
+                except Exception as error:
+                    logger.debug(f"{error}: id {id} (query set_reg_status didn't work)")
+
                 try:
                     await bot.send_message(id, "Введите свою почту")
                 except Exception as error:
-                    logger.debug(f"{error}: id {id} (send message)")
+                    logger.debug(f"{error}: id {id} (user couldn't set email)")
 
         elif bd.check_reg_status(id) == "Set email":
             if len(message.text) > 50 or "@" not in message.text:
                 try:
                     await message.reply("Почта должна содержать символ '@' и не превышать 50 символов!")
                 except Exception as error:
-                    logger.debug(f"{error}: id {id} (send message)")
+                    logger.debug(f"{error}: id {id} (user didn't get valid email message)")
 
             else:
-                bd.set_email(id, message.text)
-                bd.set_reg_status(id, "Verification")
+                try:
+                    bd.set_email(id, message.text)
+                except Exception as error:
+                    logger.debug(f"{error}: id {id} (query set_email didn't work)")
+                try:
+                    bd.set_reg_status(id, "Verification")
+                except Exception as error:
+                    logger.debug(f"{error}: id {id} (query set_reg_status didn't work)")
+
                 try:
                     await bot.send_message(
                         id,
@@ -137,17 +161,25 @@ async def message_handler(message: types.Message):
                         reply_markup=btn.verification_keyboard
                     )
                 except Exception as error:
-                    logger.debug(f"{error}: id {id} (send message)")
+                    logger.debug(f"{error}: id {id} (user didn't get verification message)")
 
         elif bd.check_reg_status(id) == "Verification" and message.text == 'Да ✅':
-            bd.set_reg_status(id, "Registered")
+            try:
+                bd.set_reg_status(id, "Registered")
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (query set_reg_status didn't work)")
+
             try:
                 await bot.send_message(id, reg_answer, parse_mode="Markdown", reply_markup=btn.menu_keyboard)
             except Exception as error:
-                logger.debug(f"{error}: id {id} (send message)")
+                logger.debug(f"{error}: id {id} (user didn't get message after registration and accept his data)")
 
         elif bd.check_reg_status(id) == "Verification" and message.text == 'Нет ❌':
-            bd.set_reg_status(id, "Not registered")
+            try:
+                bd.set_reg_status(id, "Not registered")
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (query set_reg_status didn't work)")
+
             try:
                 await bot.send_message(
                     id,
@@ -155,20 +187,24 @@ async def message_handler(message: types.Message):
                     reply_markup=btn.menu_keyboard
                 )
             except Exception as error:
-                logger.debug(f"{error}: id {id} (send message)")
+                logger.debug(f"{error}: id {id} (user didn't get message after registration and don't accept his data)")
 
         elif bd.check_reg_status(id) == "Registered" and message.text == 'Изменить данные ✍':
-            bd.set_reg_status(id, "Set name")
+            try:
+                bd.set_reg_status(id, "Set name")
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (query set_reg_status didn't work)")
+
             try:
                 await bot.send_message(id, f"Введите свое имя или никнейм")
             except Exception as error:
-                logger.debug(f"{error}: id {id} (send message)")
+                logger.debug(f"{error}: id {id} (user couldn't change data after registration (set name))")
 
         elif bd.check_reg_status(id) == "Registered" and message.text == 'Оставить без изменений ✋':
             try:
                 await bot.send_message(id, f"Ваши данные остались без изменений", reply_markup=btn.menu_keyboard)
             except Exception as error:
-                logger.debug(f"{error}: id {id} (send message)")
+                logger.debug(f"{error}: id {id} (user didn't get message after reject to change his data)")
 
         """
         ================================
@@ -180,14 +216,18 @@ async def message_handler(message: types.Message):
             try:
                 await bot.send_message(id, "Пожалуйста, зарегистрируйтесь!", reply_markup=btn.menu_keyboard)
             except Exception as error:
-                logger.debug(f"{error}: id {id} (send message)")
+                logger.debug(f"{error}: id {id} (user didn't get message about need to registration before quiz)")
 
         elif message.text == "Викторина 🎮" and bd.check_reg_status(id) == "Registered":
-            bd.set_quiz_score(id, "-1, 0, 0")
+            try:
+                bd.set_quiz_score(id, "-1, 0, 0")
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (query set_quiz_score didn't work)")
+
             try:
                 await quiz(id)
             except Exception as error:
-                logger.debug(f"{error}: id {id} (quiz start)")
+                logger.debug(f"{error}: id {id} (quiz hasn't start)")
 
         """
         ================================
@@ -204,10 +244,10 @@ async def message_handler(message: types.Message):
                 await bot.send_message(id, f"Загружаю...")
                 await bot.send_media_group(id, media=media)
             except Exception as error:
-                logger.debug(f"{error}: id {id} (send pictures)")
+                logger.debug(f"{error}: id {id} (user didn't get price pictures)")
 
     except Exception as error:
-        logger.debug(f"{error}: id {id} (bd query)")
+        logger.debug(f"{error}: id {id} (problem with bd queries check_reg_status into message_handler)")
 
 
 async def quiz(id, answer=None):
@@ -227,12 +267,12 @@ async def quiz(id, answer=None):
                         is_anonymous=False
                     )
         except Exception as error:
-            logger.debug(f"{error}: id {id} (send first quiz question)")
+            logger.debug(f"{error}: id {id} (didn't send first quiz question)")
 
         try:
             bd.set_quiz_status(id, msg.poll.id)
         except Exception as error:
-            logger.debug(f"{error}: id {id} (bd query)")
+            logger.debug(f"{error}: id {id} (query set_quiz_status didn't work)")
 
     else:
         try:
@@ -245,18 +285,19 @@ async def quiz(id, answer=None):
                 is_anonymous=False
             )
         except Exception as error:
-            logger.debug(f"{error}: id {id} (send next quiz question)")
+            logger.debug(f"{error}: id {id} (didn't send next quiz question)")
 
         try:
             bd.set_quiz_status(id, msg.poll.id)
         except Exception as error:
-            logger.debug(f"{error}: id {id} (bd query)")
+            logger.debug(f"{error}: id {id} (query set_quiz_status didn't work)")
 
 
 @dp.poll_answer_handler()
 async def poll_answer_handler(quiz_answer: types.PollAnswer):
     id = quiz_answer.user.id
     poll_id = quiz_answer.poll_id
+
     try:
         if poll_id == bd.get_quiz_status(id):
 
@@ -267,21 +308,33 @@ async def poll_answer_handler(quiz_answer: types.PollAnswer):
 
                 if quiz_stage == -1 and quiz_answer.option_ids[0] == correct_answer:
                     answers = qz.shuffle_answers()
-                    bd.set_quiz_answers(id, '#'.join(answers))
+                    try:
+                        bd.set_quiz_answers(id, '#'.join(answers))
+                    except Exception as error:
+                        logger.debug(f"{error}: id {id} (query set_quiz_answers didn't work)")
+
                     quiz_stage += 1
                     correct_answer = qz.get_correct_question(answers[quiz_stage])
-                    bd.set_quiz_score(id, f"{quiz_stage}, {quiz_score}, {correct_answer}")
+                    try:
+                        bd.set_quiz_score(id, f"{quiz_stage}, {quiz_score}, {correct_answer}")
+                    except Exception as error:
+                        logger.debug(f"{error}: id {id} (query set_quiz_score didn't work)")
+
                     try:
                         await quiz(id, answers[quiz_stage])
                     except Exception as error:
-                        logger.debug(f"{error}: id {id} (send first quiz question)")
+                        logger.debug(f"{error}: id {id} (didn't send first quiz question)")
 
                 elif quiz_stage == -1 and quiz_answer.option_ids[0] != correct_answer:
-                    bd.set_quiz_status(id, "Cancelled")
+                    try:
+                        bd.set_quiz_status(id, "Cancelled")
+                    except Exception as error:
+                        logger.debug(f"{error}: id {id} (query set_quiz_status didn't work)")
+
                     try:
                         await bot.send_message(id, "Проверьте свои знания в следующий раз!", reply_markup=btn.menu_keyboard)
                     except Exception as error:
-                        logger.debug(f"{error}: id {id} (send message)")
+                        logger.debug(f"{error}: id {id} (user didn't get message after reject quiz)")
 
                 else:
                     if quiz_answer.option_ids[0] == correct_answer:
@@ -291,11 +344,15 @@ async def poll_answer_handler(quiz_answer: types.PollAnswer):
                     answers = bd.get_quiz_answers(id).split('#')
                     next_answer = answers[quiz_stage]
                     correct_answer = qz.get_correct_question(next_answer)
-                    bd.set_quiz_score(id, f"{quiz_stage}, {quiz_score}, {correct_answer}")
+                    try:
+                        bd.set_quiz_score(id, f"{quiz_stage}, {quiz_score}, {correct_answer}")
+                    except Exception as error:
+                        logger.debug(f"{error}: id {id} (query set_quiz_score didn't work)")
+
                     try:
                         await quiz(id, next_answer)
                     except Exception as error:
-                        logger.debug(f"{error}: id {id} (send next quiz question)")
+                        logger.debug(f"{error}: id {id} (didn't send next quiz question)")
 
             else:
                 try:
@@ -306,16 +363,56 @@ async def poll_answer_handler(quiz_answer: types.PollAnswer):
                         reply_markup=btn.menu_keyboard
                     )
                 except Exception as error:
-                    logger.debug(f"{error}: id {id} (send message)")
+                    logger.debug(f"{error}: id {id} (user didn't get congrats message after quiz)")
 
                 try:
                     bd.set_quiz_status(id, "Cancelled")
                 except Exception as error:
-                    logger.debug(f"{error}: id {id} (bd query)")
+                    logger.debug(f"{error}: id {id} (query set_quiz_status didn't work)")
 
     except Exception as error:
-        logger.debug(f"{error}: id {id} (bd query)")
+        logger.debug(f"{error}: id {id} (queries get_quiz_status into func poll_message_handler didn't work)")
+
+
+async def reminder():
+    try:
+        users_ids = bd.get_users_ids()
+    except Exception as error:
+        logger.debug(f"{error}: (query get_users_ids didn't work)")
+
+    days_left = dt.days_left()
+
+    for id in users_ids:
+        if id[0]:
+            if days_left:
+                try:
+                    await bot.send_message(id[0], f"❗ До вебинара осталось {days_left} ❗")
+                    await asyncio.sleep(0.05)
+                except Exception as error:
+                    logger.debug(f"{error}: id {id[0]} (user didn't get remind message)")
+            else:
+                try:
+                    await bot.send_message(id[0], f"❗ Вебинар уже сегодня, не пропусти ❗")
+                    await asyncio.sleep(0.05)
+                except Exception as error:
+                    logger.debug(f"{error}: id {id[0]} (user didn't get today remind message)")
+
+
+# async def news_place():
+#     users_ids = bd.get_users_ids()
+#     news_message = (
+#         f"Здесь будут свежие новости"
+#     )
+#
+#     for id in users_ids:
+#         if id[0]:
+#             await bot.send_message(id[0], news_message, parse_mode="Markdown")
+#             await asyncio.sleep(0.05)
+
 
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
+
+
+# sched.add_job(job_function, 'interval', hours=24, start_date='2019-11-11 09:00:00', end_date='2019-12-25 11:00:00')
