@@ -31,8 +31,10 @@ bot = Bot(os.environ["TOKEN"])
 dp = Dispatcher(bot)
 
 bd = DataBasePostgres()
+bd.create_table()
 
 qz = Quiz()
+
 dt = Date(WEBINAR_DATE)
 
 
@@ -80,18 +82,7 @@ async def registration(message: types.Message):
     id = message.from_id
 
     try:
-        if bd.check_reg_status(id) == "Not registered":
-            try:
-                bd.set_reg_status(id, "Set name")
-            except Exception as error:
-                logger.debug(f"{error}: id {id} (set_name query didn't work)")
-
-            try:
-                await bot.send_message(id, "Введите свое имя или никнейм")
-            except Exception as error:
-                logger.debug(f"{error}: id {id} (user couldn't set name)")
-
-        elif bd.check_reg_status(id) == "Registered":
+        if bd.check_reg_status(id) == "Registered":
             try:
                 await bot.send_message(
                     id,
@@ -100,6 +91,17 @@ async def registration(message: types.Message):
                 )
             except Exception as error:
                 logger.debug(f"{error}: id {id} (user couldn't change his reg data)")
+
+        else:
+            try:
+                bd.set_reg_status(id, "Set name")
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (set_name query didn't work)")
+
+            try:
+                await bot.send_message(id, "Введите свое имя или никнейм", reply_markup=types.ReplyKeyboardRemove())
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (user couldn't set name)")
 
     except Exception as error:
         logger.debug(f"{error}: id {id} (check_reg_status query didn't work)")
