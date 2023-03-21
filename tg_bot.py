@@ -411,19 +411,40 @@ async def reminder():
                     logger.debug(f"{error}: id {id[0]} (user didn't get today remind message)")
 
 
-# async def news_place():
-#     users_ids = bd.get_users_ids()
-#     news_message = (
-#         f"Здесь будут свежие новости"
-#     )
-#
-#     for id in users_ids:
-#         if id[0]:
-#             await bot.send_message(id[0], news_message, parse_mode="Markdown")
-#             await asyncio.sleep(0.05)
+async def news_place():
+    try:
+        users_ids = bd.get_users_ids()
+    except Exception as error:
+        logger.debug(f"{error}: (query get_users_ids didn't work)")
+
+    news_message = (
+        f"Здесь будут свежие новости"
+    )
+
+    for id in users_ids:
+        if id[0]:
+            try:
+                await bot.send_message(id[0], news_message, parse_mode="Markdown")
+                await asyncio.sleep(0.05)
+            except Exception as error:
+                logger.debug(f"{error}: id {id[0]} (user didn't get news message)")
 
 
 if __name__ == '__main__':
-    scheduler.add_job(reminder, 'interval', hours=24, start_date='2023-03-20 12:00:00', end_date=WEBINAR_DATE, timezone='Europe/Moscow')
+    scheduler.add_job(
+        reminder,
+        'interval',
+        hours=24, start_date='2023-03-20 12:00:00',
+        end_date=WEBINAR_DATE,
+        timezone='Europe/Moscow'
+    )
+
+    # scheduler.add_job(
+    #     news_place,
+    #     'date',
+    #     run_date=datetime(2023, 3, 23, 16),
+    #     timezone='Europe/Moscow'
+    # )
+
     scheduler.start()
     executor.start_polling(dp, skip_updates=True)
