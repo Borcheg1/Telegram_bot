@@ -13,10 +13,9 @@ from quizdata import Quiz
 from dates import Date
 
 
-WEBINAR_DATE = datetime.strptime("2023 3 20 16:15", "%Y %m %d %H %M")  # установите время в формате год, месяц, день, час, минута
-                                                                       # например WEBINAR_DATE = datetime.strptime("2023 3 20 16:15", "%Y %m %d %H %M")
+WEBINAR_DATE = datetime.strptime("2023 3 23 20:00", "%Y %m %d %H:%M")  # установите время в формате год, месяц, день, час, минута
+                                                                       # например WEBINAR_DATE = datetime.strptime("2023 3 20 16:15", "%Y %m %d %H:%M")
 load_dotenv()
-os.environ['TZ'] = "Europe/Moscow"  #  Часовой пояс, в котором будет рассчитано время
 
 scheduler = AsyncIOScheduler()
 
@@ -65,7 +64,11 @@ async def start(message: types.Message):
     )
 
     if not bd.check_user_exist(id):
-        bd.add_user(id)
+        try:
+            bd.add_user(id)
+        except Exception as error:
+            logger.debug(f"{error}: id {id} (query add_user didn't work)")
+
     try:
         await bot.send_message(id, answer, parse_mode="Markdown", reply_markup=btn.menu_keyboard)
     except Exception as error:
@@ -78,7 +81,11 @@ async def registration(message: types.Message):
 
     try:
         if bd.check_reg_status(id) == "Not registered":
-            bd.set_reg_status(id, "Set name")
+            try:
+                bd.set_reg_status(id, "Set name")
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (set_name query didn't work)")
+
             try:
                 await bot.send_message(id, "Введите свое имя или никнейм")
             except Exception as error:
@@ -161,7 +168,7 @@ async def message_handler(message: types.Message):
                         reply_markup=btn.verification_keyboard
                     )
                 except Exception as error:
-                    logger.debug(f"{error}: id {id} (user didn't get verification message)")
+                    logger.debug(f"{error}: id {id} (user didn't get verification message where showing his data)")
 
         elif bd.check_reg_status(id) == "Verification" and message.text == 'Да ✅':
             try:
@@ -384,7 +391,13 @@ async def reminder():
 
     for id in users_ids:
         if id[0]:
-            if days_left:
+            if days_left == "1 день":
+                try:
+                    await bot.send_message(id[0], f"❗ До вебинара остался {days_left} ❗")
+                    await asyncio.sleep(0.05)
+                except Exception as error:
+                    logger.debug(f"{error}: id {id[0]} (user didn't get remind message)")
+            elif days_left:
                 try:
                     await bot.send_message(id[0], f"❗ До вебинара осталось {days_left} ❗")
                     await asyncio.sleep(0.05)
@@ -410,9 +423,7 @@ async def reminder():
 #             await asyncio.sleep(0.05)
 
 
-
 if __name__ == '__main__':
+    scheduler.add_job(reminder, 'interval', hours=24, start_date='2023-03-20 12:00:00', end_date=WEBINAR_DATE, timezone='Europe/Moscow')
+    scheduler.start()
     executor.start_polling(dp, skip_updates=True)
-
-
-# sched.add_job(job_function, 'interval', hours=24, start_date='2019-11-11 09:00:00', end_date='2019-12-25 11:00:00')
