@@ -18,6 +18,20 @@ class DataBasePostgres:
         )
         self.cursor = self.connection.cursor()
 
+    def create_table(self):
+        with self.connection:
+            self.cursor.execute(
+                "CREATE TABLE IF NOT EXISTS users ("
+                "id serial PRIMARY KEY,"
+                "user_id INTEGER UNIQUE NOT NULL,"
+                "name VARCHAR (50),"
+                "email VARCHAR (50),"
+                "reg_status VARCHAR (20),"
+                "quiz_status VARCHAR (20),"
+                "quiz_score VARCHAR (20),"
+                "quiz_answers TEXT)"
+            )
+
     def add_user(self, user_id):
         with self.connection:
             self.cursor.execute("INSERT INTO users (user_id) VALUES (%s)", (user_id,))
