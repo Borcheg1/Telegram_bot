@@ -27,6 +27,7 @@ class DataBasePostgres:
                 "name VARCHAR (50),"
                 "email VARCHAR (50),"
                 "reg_status VARCHAR (20),"
+                "del_status VARCHAR (20),"
                 "quiz_status VARCHAR (20),"
                 "quiz_score VARCHAR (20),"
                 "quiz_answers TEXT)"
@@ -54,9 +55,18 @@ class DataBasePostgres:
         with self.connection:
             self.cursor.execute("UPDATE users SET reg_status = (%s) WHERE user_id = (%s)", (reg_status, user_id,))
 
+    def set_del_status(self, user_id, del_status):
+        with self.connection:
+            self.cursor.execute("UPDATE users SET del_status = (%s) WHERE user_id = (%s)", (del_status, user_id,))
+
     def check_reg_status(self, user_id):
         with self.connection:
             self.cursor.execute("SELECT reg_status FROM users WHERE user_id = (%s)", (user_id,))
+            return self.cursor.fetchone()[0]
+
+    def check_del_status(self, user_id):
+        with self.connection:
+            self.cursor.execute("SELECT del_status FROM users WHERE user_id = (%s)", (user_id,))
             return self.cursor.fetchone()[0]
 
     def set_name(self, user_id, name):
