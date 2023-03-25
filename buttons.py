@@ -24,7 +24,7 @@ change_reg_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboar
 change_reg_keyboard.add(btn_change_yes, btn_change_no)
 
 menu_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-menu_keyboard.add(btn_reg, btn_quiz, btn_prices)
+menu_keyboard.add(btn_reg, btn_quiz, btn_prices, btn_delete)
 
 quiz_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
 quiz_keyboard.add(btn_quiz_start, btn_quiz_cancel)
