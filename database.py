@@ -35,6 +35,10 @@ class DataBasePostgres:
     def add_user(self, user_id):
         with self.connection:
             self.cursor.execute("INSERT INTO users (user_id) VALUES (%s)", (user_id,))
+
+    def delete_user(self, user_id):
+        with self.connection:
+            self.cursor.execute("DELETE FROM users WHERE user_id = (%s)", (user_id,))
     
     def get_users_ids(self):
         with self.connection:
