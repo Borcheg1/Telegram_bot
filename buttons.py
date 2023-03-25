@@ -11,12 +11,14 @@ btn_quiz = KeyboardButton('Викторина 🎮')
 btn_prices = KeyboardButton('Цены 💰')
 btn_delete = KeyboardButton('Удаление ⛔')
 
+btn_start = KeyboardButton('/start')
+
 btn_quiz_start = KeyboardButton('Начать ✅')
 btn_quiz_cancel = KeyboardButton('Отменить ❌')
 
 
-verification_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-verification_keyboard.add(btn_yes, btn_no)
+yes_no_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+yes_no_keyboard.add(btn_yes, btn_no)
 
 change_reg_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
 change_reg_keyboard.add(btn_change_yes, btn_change_no)
@@ -26,3 +28,6 @@ menu_keyboard.add(btn_reg, btn_quiz, btn_prices)
 
 quiz_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
 quiz_keyboard.add(btn_quiz_start, btn_quiz_cancel)
+
+start_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+start_keyboard.add(btn_start)
