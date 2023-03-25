@@ -9,6 +9,7 @@ btn_change_no = KeyboardButton('Оставить без изменений ✋')
 btn_reg = KeyboardButton('Регистрация 🎓')
 btn_quiz = KeyboardButton('Викторина 🎮')
 btn_prices = KeyboardButton('Цены 💰')
+btn_delete = KeyboardButton('Удаление ⛔')
 
 btn_quiz_start = KeyboardButton('Начать ✅')
 btn_quiz_cancel = KeyboardButton('Отменить ❌')
