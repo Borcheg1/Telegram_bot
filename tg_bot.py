@@ -77,8 +77,8 @@ async def start(message: types.Message):
         logger.debug(f"{error}: id {id} (user didn't get start message)")
 
 
-@dp.message_handler(filters.Regexp(regexp=r'(Р|р)егистрация'))
-async def registration(message: types.Message):
+@dp.message_handler(filters.Regexp(regexp=r'Регистрация 🎓'))
+async def registration_handler(message: types.Message):
     id = message.from_id
 
     try:
@@ -107,127 +107,24 @@ async def registration(message: types.Message):
         logger.debug(f"{error}: id {id} (check_reg_status query didn't work)")
 
 
-@dp.message_handler()
-async def message_handler(message: types.Message):
+@dp.message_handler(filters.Regexp(regexp=r'Викторина 🎮'))
+async def quiz_handler(message: types.Message):
     """
     ================================
-    ==    REGISTRATION HANDLER    ==
+    ==        QUIZ HANDLER        ==
     ================================
     """
 
     id = message.from_id
-    reg_answer = (
-        f"Спасибо за регистрацию на вебинар! 👍\n"
-        f"Жду тебя {dt.get_webinar_date()}!\n"
-        f"_Ссылка на вебинар будет отправлена в этот чат и на почту за 10 минут до его начала, не пропусти!_"
-    )
 
     try:
-        if bd.check_reg_status(id) == "Set name":
-            if len(message.text) > 50:
-                try:
-                    await message.reply("Имя не должно превышать 50 символов!")
-                except Exception as error:
-                    logger.debug(f"{error}: id {id} (user didn't get valid set name message)")
-
-            else:
-                try:
-                    bd.set_name(id, message.text)
-                except Exception as error:
-                    logger.debug(f"{error}: id {id} (query set_name didn't work)")
-
-                try:
-                    bd.set_reg_status(id, "Set email")
-                except Exception as error:
-                    logger.debug(f"{error}: id {id} (query set_reg_status didn't work)")
-
-                try:
-                    await bot.send_message(id, "Введите свою почту")
-                except Exception as error:
-                    logger.debug(f"{error}: id {id} (user couldn't set email)")
-
-        elif bd.check_reg_status(id) == "Set email":
-            if len(message.text) > 50 or "@" not in message.text:
-                try:
-                    await message.reply("Почта должна содержать символ '@' и не превышать 50 символов!")
-                except Exception as error:
-                    logger.debug(f"{error}: id {id} (user didn't get valid email message)")
-
-            else:
-                try:
-                    bd.set_email(id, message.text)
-                except Exception as error:
-                    logger.debug(f"{error}: id {id} (query set_email didn't work)")
-                try:
-                    bd.set_reg_status(id, "Verification")
-                except Exception as error:
-                    logger.debug(f"{error}: id {id} (query set_reg_status didn't work)")
-
-                try:
-                    await bot.send_message(
-                        id,
-                        f"Ваше имя: {bd.get_name(id)}\nВаша почта: {bd.get_email(id)}",
-                        reply_markup=btn.verification_keyboard
-                    )
-                except Exception as error:
-                    logger.debug(f"{error}: id {id} (user didn't get verification message where showing his data)")
-
-        elif bd.check_reg_status(id) == "Verification" and message.text == 'Да ✅':
-            try:
-                bd.set_reg_status(id, "Registered")
-            except Exception as error:
-                logger.debug(f"{error}: id {id} (query set_reg_status didn't work)")
-
-            try:
-                await bot.send_message(id, reg_answer, parse_mode="Markdown", reply_markup=btn.menu_keyboard)
-            except Exception as error:
-                logger.debug(f"{error}: id {id} (user didn't get message after registration and accept his data)")
-
-        elif bd.check_reg_status(id) == "Verification" and message.text == 'Нет ❌':
-            try:
-                bd.set_reg_status(id, "Not registered")
-            except Exception as error:
-                logger.debug(f"{error}: id {id} (query set_reg_status didn't work)")
-
-            try:
-                await bot.send_message(
-                    id,
-                    f"Чтобы пройти регистрацию заново нажми кнопку 'Регистрация'",
-                    reply_markup=btn.menu_keyboard
-                )
-            except Exception as error:
-                logger.debug(f"{error}: id {id} (user didn't get message after registration and don't accept his data)")
-
-        elif bd.check_reg_status(id) == "Registered" and message.text == 'Изменить данные ✍':
-            try:
-                bd.set_reg_status(id, "Set name")
-            except Exception as error:
-                logger.debug(f"{error}: id {id} (query set_reg_status didn't work)")
-
-            try:
-                await bot.send_message(id, f"Введите свое имя или никнейм")
-            except Exception as error:
-                logger.debug(f"{error}: id {id} (user couldn't change data after registration (set name))")
-
-        elif bd.check_reg_status(id) == "Registered" and message.text == 'Оставить без изменений ✋':
-            try:
-                await bot.send_message(id, f"Ваши данные остались без изменений", reply_markup=btn.menu_keyboard)
-            except Exception as error:
-                logger.debug(f"{error}: id {id} (user didn't get message after reject to change his data)")
-
-        """
-        ================================
-        ==        QUIZ HANDLER        ==
-        ================================
-        """
-
-        if message.text == "Викторина 🎮" and bd.check_reg_status(id) != "Registered":
+        if bd.check_reg_status(id) != "Registered":
             try:
                 await bot.send_message(id, "Пожалуйста, зарегистрируйтесь!", reply_markup=btn.menu_keyboard)
             except Exception as error:
                 logger.debug(f"{error}: id {id} (user didn't get message about need to registration before quiz)")
 
-        elif message.text == "Викторина 🎮" and bd.check_reg_status(id) == "Registered":
+        elif bd.check_reg_status(id) == "Registered":
             try:
                 bd.set_quiz_score(id, "-1, 0, 0")
             except Exception as error:
@@ -238,25 +135,53 @@ async def message_handler(message: types.Message):
             except Exception as error:
                 logger.debug(f"{error}: id {id} (quiz hasn't start)")
 
-        """
-        ================================
-        ==       PRICE HANDLER        ==
-        ================================
-        """
+    except Exception as error:
+        logger.debug(f"{error}: id {id} (problem with bd queries check_reg_status into quiz_handler)")
 
-        if message.text == "Цены 💰":
-            pictures = os.listdir('price_pictures')
-            media = types.MediaGroup()
-            for picture in pictures:
-                media.attach_photo(types.InputFile(f"price_pictures/{picture}"), picture)
-            try:
-                await bot.send_message(id, f"Загружаю...")
-                await bot.send_media_group(id, media=media)
-            except Exception as error:
-                logger.debug(f"{error}: id {id} (user didn't get price pictures)")
+
+@dp.message_handler(filters.Regexp(regexp=r'Цены 💰'))
+async def price_handler(message: types.Message):
+    """
+    ================================
+    ==       PRICE HANDLER        ==
+    ================================
+    """
+
+    id = message.from_id
+    pictures = os.listdir('price_pictures')
+    media = types.MediaGroup()
+    for picture in pictures:
+        media.attach_photo(types.InputFile(f"price_pictures/{picture}"), picture)
+    try:
+        await bot.send_message(id, f"Загружаю...")
+        await bot.send_media_group(id, media=media)
+    except Exception as error:
+        logger.debug(f"{error}: id {id} (user didn't get price pictures)")
+
+
+@dp.message_handler(filters.Regexp(regexp=r'Удаление ⛔'))
+async def delete_handler(message: types.Message):
+    """
+    ================================
+    ==       DELETE HANDLER       ==
+    ================================
+    """
+
+    id = message.from_id
+    try:
+        bd.set_del_status(id, "Deleting")
+    except Exception as error:
+        logger.debug(f"{error}: id {id} (query set_del_status didn't work)")
+
+    try:
+        await bot.send_message(
+            id,
+            "Вы уверены, что больше не хотите получать от меня сообщения?",
+            reply_markup=btn.yes_no_keyboard
+        )
 
     except Exception as error:
-        logger.debug(f"{error}: id {id} (problem with bd queries check_reg_status into message_handler)")
+        logger.debug(f"{error}: id {id} (user didn't get message about delete his id)")
 
 
 async def quiz(id, answer=None):
@@ -432,6 +357,156 @@ async def news_place():
                 logger.debug(f"{error}: id {id[0]} (user didn't get news message)")
 
 
+@dp.message_handler()
+async def message_handler(message: types.Message):
+    """
+    ================================
+    ==    REGISTRATION HANDLER    ==
+    ================================
+    """
+
+    id = message.from_id
+    reg_answer = (
+        f"Спасибо за регистрацию на вебинар! 👍\n"
+        f"Жду тебя {dt.get_webinar_date()}!\n"
+        f"_Ссылка на вебинар будет отправлена в этот чат и на почту за 10 минут до его начала, не пропусти!_"
+    )
+
+    try:
+        if bd.check_reg_status(id) == "Set name":
+            if len(message.text) > 50:
+                try:
+                    await message.reply("Имя не должно превышать 50 символов!")
+                except Exception as error:
+                    logger.debug(f"{error}: id {id} (user didn't get valid set name message)")
+
+            else:
+                try:
+                    bd.set_name(id, message.text)
+                except Exception as error:
+                    logger.debug(f"{error}: id {id} (query set_name didn't work)")
+
+                try:
+                    bd.set_reg_status(id, "Set email")
+                except Exception as error:
+                    logger.debug(f"{error}: id {id} (query set_reg_status didn't work)")
+
+                try:
+                    await bot.send_message(id, "Введите свою почту")
+                except Exception as error:
+                    logger.debug(f"{error}: id {id} (user couldn't set email)")
+
+        elif bd.check_reg_status(id) == "Set email":
+            if len(message.text) > 50 or "@" not in message.text:
+                try:
+                    await message.reply("Почта должна содержать символ '@' и не превышать 50 символов!")
+                except Exception as error:
+                    logger.debug(f"{error}: id {id} (user didn't get valid email message)")
+
+            else:
+                try:
+                    bd.set_email(id, message.text)
+                except Exception as error:
+                    logger.debug(f"{error}: id {id} (query set_email didn't work)")
+                try:
+                    bd.set_reg_status(id, "Verification")
+                except Exception as error:
+                    logger.debug(f"{error}: id {id} (query set_reg_status didn't work)")
+
+                try:
+                    await bot.send_message(
+                        id,
+                        f"Ваше имя: {bd.get_name(id)}\nВаша почта: {bd.get_email(id)}",
+                        reply_markup=btn.yes_no_keyboard
+                    )
+                except Exception as error:
+                    logger.debug(f"{error}: id {id} (user didn't get verification message where showing his data)")
+
+        elif bd.check_reg_status(id) == "Verification" and message.text == 'Да ✅':
+            try:
+                bd.set_reg_status(id, "Registered")
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (query set_reg_status didn't work)")
+
+            try:
+                await bot.send_message(id, reg_answer, parse_mode="Markdown", reply_markup=btn.menu_keyboard)
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (user didn't get message after registration and accept his data)")
+
+        elif bd.check_reg_status(id) == "Verification" and message.text == 'Нет ❌':
+            try:
+                bd.set_reg_status(id, "Not registered")
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (query set_reg_status didn't work)")
+
+            try:
+                await bot.send_message(
+                    id,
+                    f"Чтобы пройти регистрацию заново нажми кнопку 'Регистрация'",
+                    reply_markup=btn.menu_keyboard
+                )
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (user didn't get message after registration and don't accept his data)")
+
+        elif bd.check_reg_status(id) == "Registered" and message.text == 'Изменить данные ✍':
+            try:
+                bd.set_reg_status(id, "Set name")
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (query set_reg_status didn't work)")
+
+            try:
+                await bot.send_message(id, f"Введите свое имя или никнейм")
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (user couldn't change data after registration (set name))")
+
+        elif bd.check_reg_status(id) == "Registered" and message.text == 'Оставить без изменений ✋':
+            try:
+                await bot.send_message(id, f"Ваши данные остались без изменений", reply_markup=btn.menu_keyboard)
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (user didn't get message after reject to change his data)")
+
+    except Exception as error:
+        logger.debug(f"{error}: id {id} (problem with bd queries check_reg_status into message_handler)")
+
+    """
+    ==========================
+    ==    DELETE HANDLER    ==
+    ==========================
+    """
+
+    try:
+        if bd.check_del_status(id) == "Deleting" and message.text == "Да ✅":
+            try:
+                await bot.send_message(
+                    id,
+                    "Чтобы возобновить работу с ботом введите команду '/start'",
+                    reply_markup=btn.start_keyboard
+                )
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (user didn't get message after accept deliting)")
+
+            await asyncio.sleep(0.5)
+
+            try:
+                bd.delete_user(id)
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (query delete_user didn't work; user wasn't delete from bd)")
+
+        elif bd.check_del_status(id) == "Deleting" and message.text == "Нет ❌":
+            try:
+                await bot.send_message(id, "Спасибо, что продолжаете пользоваться ботом!", reply_markup=btn.menu_keyboard)
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (user didn't get message after decline deliting)")
+
+            try:
+                bd.set_del_status(id, "Rejected")
+            except Exception as error:
+                logger.debug(f"{error}: id {id} (query set_del_status didn't work)")
+
+    except Exception as error:
+        logger.debug(f"{error}: id {id} (query check_del_status didn't work into message_handler)")
+
+
 if __name__ == '__main__':
     scheduler.add_job(
         reminder,
@@ -441,12 +516,12 @@ if __name__ == '__main__':
         timezone='Europe/Moscow'
     )
 
-    # scheduler.add_job(
-    #     news_place,
-    #     'date',
-    #     run_date=datetime(2023, 3, 23, 16),
-    #     timezone='Europe/Moscow'
-    # )
+    scheduler.add_job(
+        news_place,
+        'date',
+        run_date=datetime(2023, 3, 25, 18, 4),
+        timezone='Europe/Moscow'
+    )
 
     scheduler.start()
     executor.start_polling(dp, skip_updates=True)
