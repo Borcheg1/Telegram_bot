@@ -208,10 +208,24 @@ class DataBasePostgres:
             return self.cursor.fetchone()[0]
 
     def set_quiz_score(self, user_id, quiz_score):
+        """
+        Изменение счета викторины
+
+        :param user_id: int, id пользователя
+        :param quiz_score: str, счет викторины (строка из трех цифр, разделенных запятой и пробелом)
+        """
+
         with self.connection:
             self.cursor.execute("UPDATE users SET quiz_score = (%s) WHERE user_id = (%s)", (quiz_score, user_id,))
 
     def get_quiz_score(self, user_id):
+        """
+        Получение текущего счета викторины
+
+        :param user_id: int, id пользователя
+        :return: str, счет викторины (строка из трех цифр, разделенных запятой и пробелом)
+        """
+
         with self.connection:
             self.cursor.execute("SELECT quiz_score FROM users WHERE user_id = (%s)", (user_id,))
             return self.cursor.fetchone()[0]
@@ -234,6 +248,6 @@ class DataBasePostgres:
         :param user_id: int, id пользователя
         :return: list, список вопросов (модуль quizdata, класс Quiz, ключи словаря quiz_data)
         """
-        
+
         self.cursor.execute("SELECT quiz_questions[(%s)] FROM users WHERE user_id = (%s)", (question_number, user_id,))
         return self.cursor.fetchone()[0]
