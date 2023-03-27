@@ -23,8 +23,9 @@ from quizdata import Quiz
 from dates import Date
 
 
-WEBINAR_DATE = datetime.strptime("2023 3 23 20:00", "%Y %m %d %H:%M")  # установите время в формате год, месяц, день, час, минута
-                                                                       # например WEBINAR_DATE = datetime.strptime("2023 3 20 16:15", "%Y %m %d %H:%M")
+# установите время в формате год, месяц, день, час, минута
+# например WEBINAR_DATE = datetime.strptime("2023 3 20 16:15", "%Y %m %d %H:%M")
+WEBINAR_DATE = datetime.strptime("2023 3 28 20:00", "%Y %m %d %H:%M")
 load_dotenv()
 
 scheduler = AsyncIOScheduler()
@@ -680,7 +681,7 @@ if __name__ == '__main__':
     scheduler.add_job(
         reminder,
         'interval',
-        hours=24, start_date='2023-03-20 12:00:00',
+        minutes=1, start_date='2023-03-27 15:00:00',
         end_date=WEBINAR_DATE,
         timezone='Europe/Moscow'
     )
