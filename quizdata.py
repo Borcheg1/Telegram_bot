@@ -39,15 +39,15 @@ class Quiz:
             ]
         }
 
-    def shuffle_answers(self):
-        answers = list(self.quiz_data.keys())
-        random.shuffle(answers)
-        return answers
-
-    def get_questions(self, answer):
-        questions = self.quiz_data[answer][0]
+    def shuffle_questions(self):
+        questions = list(self.quiz_data.keys())
+        random.shuffle(questions)
         return questions
 
-    def get_correct_question(self, answer):
-        correct_question = self.quiz_data[answer][1]
+    def get_answers(self, question):
+        answers = self.quiz_data[question][0]
+        return answers
+
+    def get_correct_question(self, question):
+        correct_question = self.quiz_data[question][1]
         return correct_question
