@@ -78,7 +78,7 @@ class DataBasePostgres:
 
     def check_user_exist(self, user_id):
         """
-        Проверка есть ли пользователь в базе данных
+        Проверка есть ли пользователь в БД
 
         :param user_id: int, id пользователя
         :return: bool
