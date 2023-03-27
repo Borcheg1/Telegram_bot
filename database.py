@@ -69,7 +69,7 @@ class DataBasePostgres:
         Получение id всех пользователей.
 
         :param user_id: int, id пользователя
-        :return: list
+        :return: list[tuple], лист с кортежами, в которых user_id: int
         """
 
         with self.connection:
