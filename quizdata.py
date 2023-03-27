@@ -1,3 +1,9 @@
+"""
+Класс, отвечающий за викторину.
+
+quiz_data: dict, словарь где ключ - это вопрос викторины,
+значение - это список со списком ответов и индексом верного ответа
+"""
 import random
 
 
@@ -40,14 +46,33 @@ class Quiz:
         }
 
     def shuffle_questions(self):
+        """
+        Функция случайно перемешивает вопросы викторины.
+
+        :return: list[str], список с рандомно перемешанными вопросами викторины
+        """
+
         questions = list(self.quiz_data.keys())
         random.shuffle(questions)
         return questions
 
     def get_answers(self, question):
+        """
+        Функция возвращает список ответов на вопрос question
+
+        :param question: str, вопрос викторины (равен одному из ключей quiz_data)
+        :return: list[str], список с ответами на вопрос question
+        """
+
         answers = self.quiz_data[question][0]
         return answers
 
     def get_correct_question(self, question):
+        """
+        Функция возвращает индекс корректного ответа на вопрос question
+
+        :param question: str, вопрос викторины (равен одному из ключей quiz_data)
+        :return: int, индекс верного ответа
+        """
         correct_question = self.quiz_data[question][1]
         return correct_question
