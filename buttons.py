@@ -1,5 +1,6 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
+# Создание кнопок.
 btn_yes = KeyboardButton('Да ✅')
 btn_no = KeyboardButton('Нет ❌')
 
@@ -13,21 +14,19 @@ btn_delete = KeyboardButton('Удаление ⛔')
 
 btn_start = KeyboardButton('/start')
 
-btn_quiz_start = KeyboardButton('Начать ✅')
-btn_quiz_cancel = KeyboardButton('Отменить ❌')
 
-
+# Cоздание клавиатуры с кнопками 'Да ✅', 'Нет ❌'. Клавиатура одноразовая.
 yes_no_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
 yes_no_keyboard.add(btn_yes, btn_no)
 
+# Cоздание клавиатуры с кнопками 'Изменить данные ✍', 'Оставить без изменений ✋'. Клавиатура одноразовая.
 change_reg_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
 change_reg_keyboard.add(btn_change_yes, btn_change_no)
 
+# Cоздание клавиатуры с кнопками 'Регистрация 🎓', 'Викторина 🎮', 'Цены 💰', 'Удаление ⛔'.
 menu_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
 menu_keyboard.add(btn_reg, btn_quiz, btn_prices, btn_delete)
 
-quiz_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-quiz_keyboard.add(btn_quiz_start, btn_quiz_cancel)
-
+# Создание клавиатуры с кнопкой '/start'.
 start_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
 start_keyboard.add(btn_start)
