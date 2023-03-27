@@ -30,7 +30,7 @@ class DataBasePostgres:
                 "del_status VARCHAR (20),"
                 "quiz_status VARCHAR (20),"
                 "quiz_score VARCHAR (20),"
-                "quiz_answers TEXT)"
+                "quiz_questions TEXT[])"
             )
 
     def add_user(self, user_id):
@@ -105,9 +105,9 @@ class DataBasePostgres:
             self.cursor.execute("SELECT quiz_score FROM users WHERE user_id = (%s)", (user_id,))
             return self.cursor.fetchone()[0]
 
-    def set_quiz_answers(self, user_id, answers):
-        self.cursor.execute("UPDATE users SET quiz_answers = (%s) WHERE user_id = (%s)", (answers, user_id,))
+    def set_quiz_questions(self, user_id, answers):
+        self.cursor.execute("UPDATE users SET quiz_questions = (%s) WHERE user_id = (%s)", (answers, user_id,))
 
-    def get_quiz_answers(self, user_id):
-        self.cursor.execute("SELECT quiz_answers FROM users WHERE user_id = (%s)", (user_id,))
+    def get_quiz_questions(self, user_id, question_number):
+        self.cursor.execute("SELECT quiz_questions[(%s)] FROM users WHERE user_id = (%s)", (question_number, user_id,))
         return self.cursor.fetchone()[0]
