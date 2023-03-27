@@ -1,3 +1,13 @@
+"""
+Телеграмм бот, с функционалом регистрации и удаления пользователя, квизом, рассылкой картинок и
+напоминанием об определенном событии. Так же присутствует возможность рассылки новостей по графику.
+
+В дериктории проекта должна находиться папка с названием 'price_pictures',
+в которой должны находиться не более 10 изображений с расширениями 'jpeg', 'jpg', 'png'.
+В названии изображений не должно быть лишних знаков '.'
+При вводе пользователем команды 'Цены 💰', ему будут отправлены эти изображения.
+"""
+
 import asyncio
 from datetime import datetime
 import os
@@ -40,6 +50,18 @@ dt = Date(WEBINAR_DATE)
 
 @dp.message_handler(commands="start")
 async def start(message: types.Message):
+    """
+    Обработка команды '/start'.
+
+    Функция для отправки приветственного сообщения при активации бота командой '/start'.
+
+    Если пользователя нет в базе данных (столбец user_id), то записывает туда его ID.
+
+
+    :param message: types.Message
+    :return: None
+    """
+
     id = message.from_id
     answer = (
         f"*Приветствую!* 🌸\n\n"
@@ -79,6 +101,21 @@ async def start(message: types.Message):
 
 @dp.message_handler(filters.Regexp(regexp=r'Регистрация 🎓'))
 async def registration_handler(message: types.Message):
+    """
+    Обработка команды 'Регистрация 🎓'.
+
+    Функция проверяет статус пользователя в базе данных (столбец reg_status).
+
+    Если статус пользователя 'Registered', отправляет предупреждающее сообщение, что пользователь уже зарегистрирован
+    и отправляет клавиатуру с запросом на изменение данных.
+
+    Если статус не 'Registered', меняет статус на 'Set name' и отправляет сообщение о необходимости ввести имя.
+
+
+    :param message: types.Message
+    :return: None
+    """
+
     id = message.from_id
 
     try:
@@ -110,9 +147,19 @@ async def registration_handler(message: types.Message):
 @dp.message_handler(filters.Regexp(regexp=r'Викторина 🎮'))
 async def quiz_handler(message: types.Message):
     """
-    ================================
-    ==        QUIZ HANDLER        ==
-    ================================
+    Обработка команды 'Викторина 🎮'.
+
+    Функция проверяет статус пользователя в базе данных (столбец reg_status).
+
+    Если статус пользователя не 'Registered', отправляет сообщение о необходимости регистрации
+    перед прохождением викторины.
+
+    Если статус пользователя 'Registered', обновляет счет викторины (столбец quiz_score в базе данных)
+    до начальных значений и вызывает функцию quiz().
+
+
+    :param message: types.Message
+    :return: None
     """
 
     id = message.from_id
@@ -142,16 +189,24 @@ async def quiz_handler(message: types.Message):
 @dp.message_handler(filters.Regexp(regexp=r'Цены 💰'))
 async def price_handler(message: types.Message):
     """
-    ================================
-    ==       PRICE HANDLER        ==
-    ================================
+    Обработка команды 'Цены 💰'.
+
+    Функция находит все файлы в папке 'price_pictures', проверяет их расширения на соответствие 'jpeg', 'jpg', 'png',
+    и добавляет в группу изображений MediaGroup до 10 изображений.
+
+    Затем отправляет сообщение 'Загружаю...' и следом группу изображений.
+
+
+    :param message: types.Message
+    :return: None
     """
 
     id = message.from_id
     pictures = os.listdir('price_pictures')
     media = types.MediaGroup()
-    for picture in pictures:
-        media.attach_photo(types.InputFile(f"price_pictures/{picture}"), picture)
+    for idx, picture in enumerate(pictures):
+        if len(picture.split('.')) == 2 and picture.split('.')[1].lower() in ('jpeg', 'jpg', 'png') and idx < 10:
+            media.attach_photo(types.InputFile(f"price_pictures/{picture}"), picture)
     try:
         await bot.send_message(id, f"Загружаю...")
         await bot.send_media_group(id, media=media)
@@ -162,9 +217,15 @@ async def price_handler(message: types.Message):
 @dp.message_handler(filters.Regexp(regexp=r'Удаление ⛔'))
 async def delete_handler(message: types.Message):
     """
-    ================================
-    ==       DELETE HANDLER       ==
-    ================================
+    Обработка команды 'Удаление ⛔'.
+
+    Функция обновляет статус удаления пользователя на 'Deleting' (столбец del_status в базе данных).
+
+    Отправляет сообщение для подтверждения удаления пользователя и клавиатуру с кнопакми 'Да ✅', 'Нет ❌'.
+
+
+    :param message: types.Message
+    :return: None
     """
 
     id = message.from_id
@@ -184,17 +245,35 @@ async def delete_handler(message: types.Message):
         logger.debug(f"{error}: id {id} (user didn't get message about delete his id)")
 
 
-async def quiz(id, answer=None):
-    start_answer = (
-        f"❓ Викторина состоит из 11 вопросов ❓\n"
+async def quiz(id, question=None):
+    """
+    Функция принимает параметр question: str (по умалчанию None) с вопросом викторины.
+
+    Если параметр question равен None, то пользователь получает стартовый вопрос 'start_question' о начале викторины
+    с ответами 'Начать ✅', 'Отменить ❌'.
+
+    Если параметр question не равен None, то викторина уже в процессе и пользователь получает этап викторины
+    с вопросом question.
+
+    Меняется статус викторины пользователя на ID викторины (столбец quiz_status в базе данных).
+
+    Вопросы, ответы и правильный ответ викторины берутся из модуля quizdata, класса Quiz.
+
+
+    :param question: str, вопрос викторины
+    :return: None
+    """
+
+    start_question = (
+        f"❓ Викторина состоит из {len(qz.quiz_data)} вопросов ❓\n"
         f"Проверим, как хорошо вы знакомы с таро?"
     )
 
-    if answer is None:
+    if question is None:
         try:
             msg = await bot.send_poll(
                         id,
-                        start_answer,
+                        start_question,
                         ['Начать ✅', 'Отменить ❌'],
                         type='quiz',
                         correct_option_id=0,
@@ -212,10 +291,10 @@ async def quiz(id, answer=None):
         try:
             msg = await bot.send_poll(
                 id,
-                answer,
-                qz.get_questions(answer),
+                question,
+                qz.get_answers(question),
                 type='quiz',
-                correct_option_id=qz.get_correct_question(answer),
+                correct_option_id=qz.get_correct_question(question),
                 is_anonymous=False
             )
         except Exception as error:
@@ -228,38 +307,70 @@ async def quiz(id, answer=None):
 
 
 @dp.poll_answer_handler()
-async def poll_answer_handler(quiz_answer: types.PollAnswer):
-    id = quiz_answer.user.id
-    poll_id = quiz_answer.poll_id
+async def poll_answer_handler(quiz_question: types.PollAnswer):
+    """
+    Функция обрабатывает ответ пользователя на вопрос викторины.
+
+    Выполняется запрос счета викторины (столбец quiz_score в базе данных),
+    если quiz_stage равняется -1, то пользователь ответил на стартовый вопрос.
+
+    Если ответ положительный, то в базу данных записываются все вопросы викторины
+    в случайном порядке (столбец quiz_questions).
+
+    Если ответ отрицательный, то викторина завершается
+    и в базу данных записывается статус 'Cancelled' (столбец quiz_status).
+
+    По окончании викторины отправляется сообщение с результатами.
+
+
+    :param quiz_question: types.PollAnswer
+    :return: None
+    """
+
+    id = quiz_question.user.id
+    poll_id = quiz_question.poll_id
 
     try:
+        # проверка относится ли викторина к пользователю
         if poll_id == bd.get_quiz_status(id):
 
+            # получение счета викторины из бд
+            # quiz_stage: str, этап викторины (порядковый номер вопроса). При значении -1 выдается стартовый вопрос
+            # quiz_score: str, счетчик правильных ответов
+            # correct_answer: str, индекс правильного ответа
             quiz_stage, quiz_score, correct_answer = bd.get_quiz_score(id).split(', ')
             quiz_stage, quiz_score, correct_answer = int(quiz_stage), int(quiz_score), int(correct_answer)
 
-            if quiz_stage < 10:
+            # общее количество вопросов викторины
+            if quiz_stage < len(qz.quiz_data) - 1:
 
-                if quiz_stage == -1 and quiz_answer.option_ids[0] == correct_answer:
-                    answers = qz.shuffle_answers()
+                # если ответ на стартовый вопрос положительный, то вопросы рандомно перемешиваются
+                # и записываются в базу данных (столбец quiz_questions)
+                if quiz_stage == -1 and quiz_question.option_ids[0] == correct_answer:
+                    questions = qz.shuffle_questions()
                     try:
-                        bd.set_quiz_answers(id, '#'.join(answers))
+                        bd.set_quiz_questions(id, questions)
                     except Exception as error:
-                        logger.debug(f"{error}: id {id} (query set_quiz_answers didn't work)")
+                        logger.debug(f"{error}: id {id} (query set_quiz_questions didn't work)")
 
+                    # увеличение порядкового номера вопроса, получение правильного ответа
+                    # и обновление счета викторины в базе данных (столбец quiz_score)
                     quiz_stage += 1
-                    correct_answer = qz.get_correct_question(answers[quiz_stage])
+                    correct_answer = qz.get_correct_question(questions[quiz_stage])
                     try:
                         bd.set_quiz_score(id, f"{quiz_stage}, {quiz_score}, {correct_answer}")
                     except Exception as error:
                         logger.debug(f"{error}: id {id} (query set_quiz_score didn't work)")
 
+                    # вызов функции quiz с передачей следующего вопроса
                     try:
-                        await quiz(id, answers[quiz_stage])
+                        await quiz(id, questions[quiz_stage])
                     except Exception as error:
                         logger.debug(f"{error}: id {id} (didn't send first quiz question)")
 
-                elif quiz_stage == -1 and quiz_answer.option_ids[0] != correct_answer:
+                # если ответ на стартовый вопрос отрицательный, то викторина завершается
+                # и обновляется статус викторины в базе данных на 'Cancelled' (столбец quiz_status)
+                elif quiz_stage == -1 and quiz_question.option_ids[0] != correct_answer:
                     try:
                         bd.set_quiz_status(id, "Cancelled")
                     except Exception as error:
@@ -270,25 +381,32 @@ async def poll_answer_handler(quiz_answer: types.PollAnswer):
                     except Exception as error:
                         logger.debug(f"{error}: id {id} (user didn't get message after reject quiz)")
 
+                # обработка ответов на не стартовый вопрос
                 else:
-                    if quiz_answer.option_ids[0] == correct_answer:
+                    if quiz_question.option_ids[0] == correct_answer:
                         quiz_score += 1
 
+                    # получение следующего вопроса из базы данных (PostgreSQL начинает индекс с 1)
+                    # получение индекса правильного ответа
+                    # обновление счета викторины в базе данных
+                    # вызов функции quiz с передачей следующего вопроса
                     quiz_stage += 1
-                    answers = bd.get_quiz_answers(id).split('#')
-                    next_answer = answers[quiz_stage]
-                    correct_answer = qz.get_correct_question(next_answer)
+                    next_question = bd.get_quiz_questions(id, quiz_stage + 1)
+                    correct_answer = qz.get_correct_question(next_question)
                     try:
                         bd.set_quiz_score(id, f"{quiz_stage}, {quiz_score}, {correct_answer}")
                     except Exception as error:
                         logger.debug(f"{error}: id {id} (query set_quiz_score didn't work)")
 
                     try:
-                        await quiz(id, next_answer)
+                        await quiz(id, next_question)
                     except Exception as error:
                         logger.debug(f"{error}: id {id} (didn't send next quiz question)")
 
+            # обработка завершения викторины
             else:
+                if quiz_question.option_ids[0] == correct_answer:
+                    quiz_score += 1
                 try:
                     await bot.send_message(
                         id,
@@ -309,6 +427,17 @@ async def poll_answer_handler(quiz_answer: types.PollAnswer):
 
 
 async def reminder():
+    """
+    Функция напоминания о вебинаре.
+
+    Используется модуль dates, класс Date.
+
+    Отправляет всем пользователям из базы данных (столбец user_id) сообщение о количестве дней до начала вебинара.
+
+
+    :return: None
+    """
+
     try:
         users_ids = bd.get_users_ids()
     except Exception as error:
@@ -339,6 +468,15 @@ async def reminder():
 
 
 async def news_place():
+    """
+    Функция для отправки новостей.
+
+    Отправляет всем пользователям из базы данных (столбец user_id) сообщение.
+
+
+    :return: None
+    """
+
     try:
         users_ids = bd.get_users_ids()
     except Exception as error:
@@ -360,9 +498,14 @@ async def news_place():
 @dp.message_handler()
 async def message_handler(message: types.Message):
     """
-    ================================
-    ==    REGISTRATION HANDLER    ==
-    ================================
+    Обработка всех сообщений пользователя, за исключением сообщений
+    'Регистрация 🎓', 'Викторина 🎮', 'Цены 💰', 'Удаление ⛔'.
+
+
+
+
+    :param message: types.Message
+    :return: None
     """
 
     id = message.from_id
@@ -372,7 +515,16 @@ async def message_handler(message: types.Message):
         f"_Ссылка на вебинар будет отправлена в этот чат и на почту за 10 минут до его начала, не пропусти!_"
     )
 
+    """
+    ================================
+    ==    REGISTRATION HANDLER    ==
+    ================================
+    """
+
     try:
+        # Если статус регистрации пользователя 'Set name' (столбец reg_status), то следующее сообщение,
+        # за исключением командных, будет записано в базу данных как имя пользователя (столбец name).
+        # Затем статус пользователя меняется на 'Set email'.
         if bd.check_reg_status(id) == "Set name":
             if len(message.text) > 50:
                 try:
@@ -396,6 +548,10 @@ async def message_handler(message: types.Message):
                 except Exception as error:
                     logger.debug(f"{error}: id {id} (user couldn't set email)")
 
+        # Если статус регистрации пользователя 'Set email' (столбец reg_status), то следующее сообщение,
+        # за исключением командных, будет записано в базу данных как почта пользователя (столбец email).
+        # Затем статус пользователя меняется на 'Verification' и ожидается продтверждение
+        # корректности введенных имени и почты от пользователя.
         elif bd.check_reg_status(id) == "Set email":
             if len(message.text) > 50 or "@" not in message.text:
                 try:
@@ -422,6 +578,8 @@ async def message_handler(message: types.Message):
                 except Exception as error:
                     logger.debug(f"{error}: id {id} (user didn't get verification message where showing his data)")
 
+        # Если статус регистрации пользователя 'Verification' (столбец reg_status) и сообщение 'Да ✅', то
+        # статус пользователя меняется на 'Registered'
         elif bd.check_reg_status(id) == "Verification" and message.text == 'Да ✅':
             try:
                 bd.set_reg_status(id, "Registered")
@@ -433,6 +591,8 @@ async def message_handler(message: types.Message):
             except Exception as error:
                 logger.debug(f"{error}: id {id} (user didn't get message after registration and accept his data)")
 
+        # Если статус регистрации пользователя 'Verification' (столбец reg_status) и сообщение 'Нет ❌', то
+        # статус пользователя меняется на 'Not registered' и отправляется сообщение о повторной регистрации.
         elif bd.check_reg_status(id) == "Verification" and message.text == 'Нет ❌':
             try:
                 bd.set_reg_status(id, "Not registered")
@@ -448,6 +608,8 @@ async def message_handler(message: types.Message):
             except Exception as error:
                 logger.debug(f"{error}: id {id} (user didn't get message after registration and don't accept his data)")
 
+        # Если статус регистрации пользователя 'Registered' (столбец reg_status) и сообщение 'Изменить данные ✍', то
+        # статус пользователя меняется на 'Set name' и отправляется сообщение с предложением ввести имя.
         elif bd.check_reg_status(id) == "Registered" and message.text == 'Изменить данные ✍':
             try:
                 bd.set_reg_status(id, "Set name")
@@ -459,6 +621,8 @@ async def message_handler(message: types.Message):
             except Exception as error:
                 logger.debug(f"{error}: id {id} (user couldn't change data after registration (set name))")
 
+        # Если статус регистрации пользователя 'Registered' (столбец reg_status)
+        # и сообщение 'Оставить без изменений ✋', то отправляется сообщение об отмене изменений.
         elif bd.check_reg_status(id) == "Registered" and message.text == 'Оставить без изменений ✋':
             try:
                 await bot.send_message(id, f"Ваши данные остались без изменений", reply_markup=btn.menu_keyboard)
@@ -475,6 +639,8 @@ async def message_handler(message: types.Message):
     """
 
     try:
+        # Если статус удаления пользователя 'Deleting' (столбец del_status) и сообщение 'Да ✅', то
+        # отправляется сообщение о возможности возобнавления работы с ботом и удаляет пользователя из базы данных.
         if bd.check_del_status(id) == "Deleting" and message.text == "Да ✅":
             try:
                 await bot.send_message(
@@ -492,6 +658,8 @@ async def message_handler(message: types.Message):
             except Exception as error:
                 logger.debug(f"{error}: id {id} (query delete_user didn't work; user wasn't delete from bd)")
 
+        # Если статус удаления пользователя 'Deleting' (столбец del_status) и сообщение 'Нет ❌', то
+        # отправляется сообщение с благодарностью и меняется статус удаления на 'Rejected'
         elif bd.check_del_status(id) == "Deleting" and message.text == "Нет ❌":
             try:
                 await bot.send_message(id, "Спасибо, что продолжаете пользоваться ботом!", reply_markup=btn.menu_keyboard)
@@ -508,6 +676,7 @@ async def message_handler(message: types.Message):
 
 
 if __name__ == '__main__':
+    # создание графика вызова функции reminder
     scheduler.add_job(
         reminder,
         'interval',
@@ -516,6 +685,7 @@ if __name__ == '__main__':
         timezone='Europe/Moscow'
     )
 
+    # создание графика вызова функции news_place
     scheduler.add_job(
         news_place,
         'date',
