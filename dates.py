@@ -2,6 +2,7 @@
 Класс для обработки дат на русский язык.
 start_webinar: class 'datetime.datetime', дата начала события (вебинара).
 """
+
 from datetime import datetime
 
 
