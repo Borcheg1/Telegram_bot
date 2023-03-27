@@ -1,3 +1,7 @@
+"""
+Класс для обработки дат на русский язык.
+start_webinar: class 'datetime.datetime', дата начала события (вебинара).
+"""
 from datetime import datetime
 
 
@@ -22,6 +26,12 @@ class Date:
         self.start_webinar = webinar_date
 
     def get_webinar_date(self):
+        """
+        Функция возвращает дату вебинара в формате "23 марта в 21:05"
+
+        :return: str, дата вебинара
+        """
+
         if self.start_webinar.minute // 10 == 0:
             date = (
                 f"{self.start_webinar.day} "
@@ -37,6 +47,12 @@ class Date:
         return date
 
     def days_left(self):
+        """
+        Функция возвращает количество оставшихся дней до вебинара в формате "5 дней"
+
+        :return: str, количество оставшихся дней
+        """
+
         days = int(self.start_webinar.strftime("%j")) - int(datetime.today().strftime("%j"))
         if days > 0 and (days % 10 == 0 or days % 10 > 4 or days in [11, 12, 13, 14, 111, 112, 113, 114]):
             return f"{days} дней"
