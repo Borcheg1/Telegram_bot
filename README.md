@@ -1,13 +1,13 @@
-# Телеграм бот
+# Telegram bot
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![aiogram](https://img.shields.io/badge/Telegram-aiogram-succes)
 ![Postgres](https://img.shields.io/badge/Database-postgreSQL-yellow)
 
 
-**Бот позволяет**:
-- делать рассылку новостей по графику
-- регистрировать пользователей
-- проходить квиз
-- получать расценки в виде группы изображений
+**Bot allows**:
+- send newsletter according to schedule;
+- register users;
+- Pass the quiz;
+- get prices as group of images.
 
-Бот предназначен для деплоя на платформу Railway
+The bot is intended for deployment to the Railway platform
